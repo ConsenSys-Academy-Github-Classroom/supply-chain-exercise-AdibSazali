@@ -6,7 +6,7 @@ contract SupplyChain {
   // <owner>
   address public owner;
 
-  // <skuCount>
+  // <skuCount> it is like a barcode
   uint public skuCount;
 
   // <items mapping>
@@ -28,19 +28,12 @@ contract SupplyChain {
   /* 
    * Events
    */
-
   // <LogForSale event: sku arg>
-  event LogForSale(uint sku);
-
-  // <LogSold event: sku arg>
   event LogSold(uint sku);
-
-  // <LogShipped event: sku arg>
   event LogShipped(uint sku);
-
-  // <LogReceived event: sku arg>
   event LogReceived(uint sku);
-
+  event LogForSale(uint sku);
+ 
 
   /* 
    * Modifiers
@@ -51,7 +44,7 @@ contract SupplyChain {
 
   // <modifier: isOwner
   modifier isOwner {
-    require(msg.sender == owner);
+    require(msg.sender == owner, "Sender is not the owner");
     _;
   }
 
@@ -114,39 +107,24 @@ contract SupplyChain {
 
   function addItem(string memory _name, uint _price) public returns (bool) {
     // 1. Create a new item and put in array
-    items[skuCount] = Item({
-    name : _name,
-    sku : skuCount,
-    price : _price,
-    state : State.ForSale,
-    seller : msg.sender,
-    buyer : address(0)
-    });
-
-    
-    // 2. Increment the skuCount by one
-    skuCount ++;
-
-    // 3. Emit the appropriate event
-    emit LogForSale(skuCount);
-
-    // 4. return true
-    return true;
 
     // hint:
-    // items[skuCount] = Item({
-    //  name: _name, 
-    //  sku: skuCount, 
-    //  price: _price, 
-    //  state: State.ForSale, 
-    //  seller: msg.sender, 
-    //  buyer: address(0)
-    //});
-    //
-    //skuCount = skuCount + 1;
-    // emit LogForSale(skuCount);
-    // return true;
+    items[skuCount] = Item({
+     name: _name, 
+     sku: skuCount, 
+     price: _price, 
+     state: State.ForSale, 
+     seller: msg.sender, 
+     buyer: address(0)
+    });
+    
+    skuCount = skuCount + 1;
+    emit LogForSale(skuCount);
+    return true;
   }
+
+
+
 
   // Implement this buyItem function. 
   // 1. it should be payable in order to receive refunds
@@ -159,14 +137,20 @@ contract SupplyChain {
   //    - check the value after the function is called to make 
   //      sure the buyer is refunded any excess ether sent. 
   // 6. call the event associated with this function!
+
+  //check if for sale
+  //check the money available is more than the price
   function buyItem(uint sku) public payable forSale(sku) paidEnough(items[sku].price) checkValue(sku){
 
-   
-    //transfer to seller
-    items[sku].seller.transfer(msg.value);
+
+    //Paid to seller
+    items[sku].seller.transfer(items[sku].price);
+    //set the buyer to the one calling the function
     items[sku].buyer = msg.sender;
+    //change the state of the product
     items[sku].state = State.Sold;
-    emit LogSold(sku);
+    //the product is sold
+    emit LogSold(skuCount);
 
 
   }
@@ -177,6 +161,10 @@ contract SupplyChain {
   // 2. Change the state of the item to shipped. 
   // 3. call the event associated with this function!
   function shipItem(uint sku) public sold(sku) verifyCaller(items[sku].seller){
+
+
+    // Item storage i = items[sku];
+    // i.state = State.Shipped
     items[sku].state = State.Shipped;
     emit LogShipped(sku);
   }
