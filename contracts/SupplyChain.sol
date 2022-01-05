@@ -4,16 +4,16 @@ pragma solidity >=0.5.16 <0.9.0;
 contract SupplyChain {
 
   // <owner>
-  address owner;
+  address public owner;
 
   // <skuCount>
-  uint skuCount;
+  uint public skuCount;
 
   // <items mapping>
   mapping (uint => Item) public items;
 
   // <enum State: ForSale, Sold, Shipped, Received>
-  enum State {Forsale, Sold, Shipped, Received}
+  enum State {ForSale, Sold, Shipped, Received}
 
   // <struct Item: name, sku, price, state, seller, and buyer>
   struct Item {
@@ -21,8 +21,8 @@ contract SupplyChain {
     uint sku;
     uint price;
     State state;
-    address  seller;
-    address  buyer;
+    address payable seller;
+    address payable  buyer;
   }
   
   /* 
@@ -70,6 +70,7 @@ contract SupplyChain {
     _;
     uint _price = items[_sku].price;
     uint amountToRefund = msg.value - _price;
+    //refund money to buyer
     items[_sku].buyer.transfer(amountToRefund);
   }
 
@@ -82,24 +83,24 @@ contract SupplyChain {
   // an Item has been added?
 
   modifier forSale(uint _sku) {
-       require(items[_sku] == State.Forsale);
+       require(items[_sku].state == State.ForSale);
        _;
   }
  
-  
+
   modifier sold(uint _sku){
-    require(items[_sku] == State.Sold);
+    require(items[_sku].state == State.Sold);
     _;
   }
 
   modifier shipped(uint _sku) {
-    require(items[_sku] == State.Shipped);
+    require(items[_sku].state == State.Shipped);
     _;
   }
 
 
   modifier received(uint _sku){
-    require(items[_sku] == State.Received);
+    require(items[_sku].state == State.Received);
     _;
   }
 
@@ -114,12 +115,12 @@ contract SupplyChain {
   function addItem(string memory _name, uint _price) public returns (bool) {
     // 1. Create a new item and put in array
     items[skuCount] = Item({
-    name = _name,
-    sku = _skuCount,
-    price = _price,
-    state = State.Forsale,
-    seller = msg.sender,
-    buyer = address(0)
+    name : _name,
+    sku : skuCount,
+    price : _price,
+    state : State.ForSale,
+    seller : msg.sender,
+    buyer : address(0)
     });
 
     
@@ -130,7 +131,7 @@ contract SupplyChain {
     emit LogForSale(skuCount);
 
     // 4. return true
-    return true
+    return true;
 
     // hint:
     // items[skuCount] = Item({
@@ -158,9 +159,11 @@ contract SupplyChain {
   //    - check the value after the function is called to make 
   //      sure the buyer is refunded any excess ether sent. 
   // 6. call the event associated with this function!
-  function buyItem(uint sku) public payable forSale(sku) paidEnough(items[sku].price) checkValue[sku]{
-    
-    items[sku].seller.transfer[msg.value];
+  function buyItem(uint sku) public payable forSale(sku) paidEnough(items[sku].price) checkValue(sku){
+
+   
+    //transfer to seller
+    items[sku].seller.transfer(msg.value);
     items[sku].buyer = msg.sender;
     items[sku].state = State.Sold;
     emit LogSold(sku);
@@ -174,7 +177,7 @@ contract SupplyChain {
   // 2. Change the state of the item to shipped. 
   // 3. call the event associated with this function!
   function shipItem(uint sku) public sold(sku) verifyCaller(items[sku].seller){
-    items[sku].state = State.shipped;
+    items[sku].state = State.Shipped;
     emit LogShipped(sku);
   }
 
